@@ -1,0 +1,4 @@
+name = "Example Package"
+version = "0.1.0"
+author = "Nathan Hare"
+post_script = "install.sh"
