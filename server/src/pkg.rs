@@ -6,12 +6,18 @@ use std::fs::File;
 use flate2::read::GzDecoder;
 use tar::Archive;
 use regex::Regex;
-use crate::db::{establish_connection, create_pacakge, upload_package_archive};
+use crate::db::{establish_connection, create_pacakge, upload_package_archive, get_package_by_name, get_package_archive};
+use crate::config::Config;
+use actix_web::dev::HttpResponseBuilder;
+use actix_web::web::Bytes;
+use actix_web::http::HeaderMap;
+use futures::prelude::*;
 
 pub fn create_scope() -> Scope {
     Scope::new("/pkg")
         .service(create_pkg)
         .service(create_pkg_get)
+        .service(get_package_latest)
         .service(get_package)
 }
 
@@ -34,8 +40,9 @@ async fn create_pkg(mut playload: Multipart) -> HttpResponse {
 
         let tar_gz = match File::open(filepath.as_str()) {
             Err(e) => {
-                eprintln!("{}", e);
-                return HttpResponse::InternalServerError().body("Could not process archive");
+                return HttpResponse::InternalServerError()
+                    .header("Content-Type", "application/json")
+                    .body(format!(r#"{{"status": 1, "error": "Error processing archive: {}"}}"#, e));
             }
             Ok(e) => e
         };
@@ -46,33 +53,49 @@ async fn create_pkg(mut playload: Multipart) -> HttpResponse {
         let mut config_str = String::new();
 
         for x in archive.entries().unwrap().filter(|x| x.as_ref().unwrap().path().unwrap().ends_with("package.toml")) {
-            x.unwrap().read_to_string(&mut config_str);
+            x.unwrap().read_to_string(&mut config_str).unwrap();
             break;
         }
 
-        let data = match toml::from_str::<super::config::Config>(config_str.as_str()) {
+        let mut data = match toml::from_str::<super::config::Config>(config_str.as_str()) {
             Ok(a) => a,
             Err(e) => {
-                return HttpResponse::BadRequest().header("Content-Type", "application/json").body(format!(r#"{{"status": 2, "error": "Invalid config file: {}"}}"#, e));
+                return HttpResponse::BadRequest()
+                    .header("Content-Type", "application/json")
+                    .body(format!(r#"{{"status": 2, "error": "Bad config: {}"}}"#, e));
             }
         };
 
-        if !regex::Regex::new("[a-zA-Z0-9-_]+").unwrap().is_match(data.name.as_str()) {
-            return HttpResponse::BadRequest().header("Content-Type", "application/json").body(format!(r#"{{"status": 2, "error": "Invalid name in package.toml"}}"#));
+        data.name = data.name.to_ascii_lowercase();
+        data.version = data.version.to_ascii_lowercase();
+
+        let re = Regex::new(r"^[a-z0-9-_.]+$").unwrap();
+
+        if !re.is_match(data.name.as_str()) {
+            return HttpResponse::BadRequest()
+                .header("Content-Type", "application/json")
+                .body(format!(r#"{{"status": 2, "error": "Invalid name in package.toml, provided: {}"}}"#, data.name.clone()));
+        }
+
+        if !re.is_match(data.version.as_str()) {
+            return HttpResponse::BadRequest()
+                .header("Content-Type", "application/json")
+                .body(format!(r#"{{"status": 2, "error": "Invalid name in package.toml, provided: {}"}}"#, data.name.clone()));
         }
 
         let db_connection = match establish_connection() {
             Ok(a) => a,
-            Err(e) => return HttpResponse::InternalServerError().header("Content-Type", "application/json")
-                .body(format!(r#"{{"status": 3, error: "{}" "#, e))
+            Err(e) => return HttpResponse::InternalServerError()
+                .header("Content-Type", "application/json")
+                .body(format!(r#"{{"status": 3, error: "Database connection error {}" "#, e))
         };
 
         let package = match create_pacakge(&db_connection, data.name.as_str(), 0, serde_json::to_string(&data).unwrap().as_str(), data.version.as_str()) {
             Ok(a) => a,
-            Err(e) => return HttpResponse::InternalServerError().header("Content-Type", "application/json")
-                .body(format!(r#"{{"status": 4, error: "{}" "#, e)),
+            Err(e) => return HttpResponse::InternalServerError()
+                .header("Content-Type", "application/json")
+                .body(format!(r#"{{"status": 4, error: "Error creating package in database: {}" "#, e)),
         };
-
 
         let mut f = File::open(&filepath).expect("no file found");
         let metadata = std::fs::metadata(&filepath).expect("unable to read metadata");
@@ -82,13 +105,17 @@ async fn create_pkg(mut playload: Multipart) -> HttpResponse {
         match upload_package_archive(&db_connection, package.id.clone(), data.version.clone(), buffer) {
             Ok(_) => {},
             Err(e) => return HttpResponse::InternalServerError().header("Content-Type", "application/json")
-                .body(format!(r#"{{"status": 5, error: "{}" "#, e)),
+                .body(format!(r#"{{"status": 4, error: "Error uploading archive to database: {}" "#, e)),
         };
 
-        return HttpResponse::Ok().header("Content-Type", "application/json").body(format!(r#"{{"status": "0", "id": {}, "package": {}}}"#, package.id, serde_json::to_string(&data).unwrap()));
+        return HttpResponse::Ok()
+            .header("Content-Type", "application/json")
+            .body(format!(r#"{{"status": "0", "id": {}, "package": {}}}"#, package.id, serde_json::to_string(&data).unwrap()));
     }
 
-    return HttpResponse::BadRequest().header("Content-Type", "application/json").body(format!(r#"{{"status: 1", "error": "no files uploaded"}}"#));
+    return HttpResponse::BadRequest()
+        .header("Content-Type", "application/json")
+        .body(format!(r#"{{"status: 5", "error": "No files uploaded"}}"#));
 }
 
 #[get("/new")]
@@ -107,10 +134,80 @@ fn create_pkg_get() -> HttpResponse {
 #[get("/get/{package}")]
 fn get_package(request: HttpRequest) -> HttpResponse {
     let package = match request.match_info().get("package") {
-        None => { return HttpResponse::BadRequest().header("Content-Type", "application/json").body(r#"{"status": 1, "error": "Please provide a package name"}"#); }
+        None => { return HttpResponse::BadRequest()
+            .header("Content-Type", "application/json")
+            .body(r#"{"status": 6, "error": "Please provide a package name"}"#); }
         Some(a) => a
     };
+
+    let db_connection = match establish_connection() {
+        Ok(a) => a,
+        Err(e) => return HttpResponse::InternalServerError().header("Content-Type", "application/json")
+            .body(format!(r#"{{"status": 3, error: "{}" "#, e))
+    };
+
+    let packages = match get_package_by_name(&db_connection, package.to_string()) {
+        Ok(a) => a,
+        Err(e) => return HttpResponse::InternalServerError()
+            .header("Content-Type", "application/json")
+            .body(format!(r#"{{"status": 6, error: "{}" "#, e)),
+    };
+
+    if !packages.is_empty() {
+        return HttpResponse::Ok()
+            .header("Content-Type", "application/json")
+            .body(format!(r#"{{"status": "0", "package": {}}}"#, serde_json::to_string(packages.get(0).unwrap()).unwrap()));
+    }
+
+    return HttpResponse::BadRequest()
+        .header("Content-Type", "application/json")
+        .body(format!(r#"{{"status": "7", "error": "no package found called: {}"}}"#, package));
+}
+
+#[get("/get/{package}@latest")]
+async fn get_package_latest(request: HttpRequest) -> HttpResponse {
+    let package = request.match_info().get("package").unwrap();
+
     println!("{}", package);
 
-    return HttpResponse::NotImplemented().body("Fuck you this is not implemented yes");
+    let db_connection = match establish_connection() {
+        Ok(a) => a,
+        Err(e) => return HttpResponse::InternalServerError().header("Content-Type", "application/json")
+            .body(format!(r#"{{"status": 3, error: "{}" "#, e))
+    };
+
+    let packages = match get_package_by_name(&db_connection, package.to_string()) {
+        Ok(a) => a,
+        Err(e) => return HttpResponse::InternalServerError().header("Content-Type", "application/json")
+            .body(format!(r#"{{"status": 6, error: "{}" "#, e)),
+    };
+
+    if packages.is_empty() {
+        return HttpResponse::BadRequest()
+            .header("Content-Type", "application/json")
+            .body(format!(r#"{{"status": "7", "error": "no package found called: {}"}}"#, package));
+    }
+
+    let package = packages.get(0).unwrap();
+
+    let data = serde_json::from_str::<Config>(package.configuration.as_str()).unwrap();
+
+    let archives = match get_package_archive(&db_connection, package.id, data.version) {
+        Ok(a) => a,
+        Err(e) => return HttpResponse::InternalServerError().header("Content-Type", "application/json")
+            .body(format!(r#"{{"status": 6, error: "{}" "#, e)),
+    };
+
+    if archives.is_empty() {
+        return HttpResponse::BadRequest()
+            .header("Content-Type", "application/json")
+            .body(format!(r#"{{"status": "7", "error": "no archive forund for: {}@{}"}}"#, package.package_name, package.current_version));
+    }
+
+    let archive = archives.get(0).unwrap().archive.as_slice();
+    let slice = archive.to_owned();
+
+    return HttpResponse::Ok()
+        .header("Content-Type", "application/x-gzip")
+        .body(Bytes::from(slice))
 }

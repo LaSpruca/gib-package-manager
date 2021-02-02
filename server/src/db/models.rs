@@ -1,4 +1,6 @@
-#[derive(Queryable)]
+use serde::Serialize;
+
+#[derive(Queryable, Serialize, Clone)]
 pub struct User {
     pub id: i32,
     pub username: String,
@@ -6,7 +8,7 @@ pub struct User {
     pub email: String,
 }
 
-#[derive(Queryable)]
+#[derive(Queryable, Serialize, Clone)]
 pub struct Package {
     pub id: i32,
     pub package_name: String,
@@ -15,7 +17,7 @@ pub struct Package {
     pub current_version: String,
 }
 
-#[derive(Queryable)]
+#[derive(Queryable, Serialize, Clone)]
 pub struct PackageArchive {
     pub id: i32,
     pub package_id: i32,

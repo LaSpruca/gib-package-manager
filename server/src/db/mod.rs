@@ -42,3 +42,19 @@ pub fn upload_package_archive<'a>(conn: &PgConnection, package_id: i32, version:
         .values(&new_package)
         .get_result(conn)
 }
+
+pub fn get_package_by_name(conn: &PgConnection, pkg: String) -> QueryResult<Vec<Package>> {
+    use schema::gib_pm::packages::dsl::*;
+
+    packages.filter(package_name.like(pkg))
+        .load::<Package>(conn)
+}
+
+pub fn get_package_archive(conn: &PgConnection, pkg_id: i32, ver: String) -> QueryResult<Vec<PackageArchive>> {
+    use schema::gib_pm::package_archives::dsl::*;
+
+    package_archives
+        .filter(package_id.eq(pkg_id))
+        .filter(version.like(ver))
+        .load::<PackageArchive>(conn)
+}

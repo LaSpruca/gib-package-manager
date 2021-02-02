@@ -26,7 +26,7 @@ async fn main() -> Result<()>{
 
     let address = format!("0.0.0.0:{}", std::env::var("PORT").unwrap_or("5000".to_string()));
 
-    println!("{}", address);
+    println!("=> Starting on https://{}", address);
 
     HttpServer::new(|| {
         App::new()
