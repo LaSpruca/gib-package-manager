@@ -5,6 +5,8 @@ use std::io::{Write, Read};
 use std::fs::File;
 use flate2::read::GzDecoder;
 use tar::Archive;
+use regex::Regex;
+use crate::db::{establish_connection, create_pacakge, upload_package_archive};
 
 pub fn create_scope() -> Scope {
     Scope::new("/pkg")
@@ -51,13 +53,39 @@ async fn create_pkg(mut playload: Multipart) -> HttpResponse {
         let data = match toml::from_str::<super::config::Config>(config_str.as_str()) {
             Ok(a) => a,
             Err(e) => {
-                return HttpResponse::BadRequest().header("Content-Type", "application/json").body(format!(r#"{{"status": -1, "error": "Invalid config file: {}"}}"#, e))
+                return HttpResponse::BadRequest().header("Content-Type", "application/json").body(format!(r#"{{"status": 2, "error": "Invalid config file: {}"}}"#, e));
             }
         };
 
+        if !regex::Regex::new("[a-zA-Z0-9-_]+").unwrap().is_match(data.name.as_str()) {
+            return HttpResponse::BadRequest().header("Content-Type", "application/json").body(format!(r#"{{"status": 2, "error": "Invalid name in package.toml"}}"#));
+        }
+
+        let db_connection = match establish_connection() {
+            Ok(a) => a,
+            Err(e) => return HttpResponse::InternalServerError().header("Content-Type", "application/json")
+                .body(format!(r#"{{"status": 3, error: "{}" "#, e))
+        };
+
+        let package = match create_pacakge(&db_connection, data.name.as_str(), 0, serde_json::to_string(&data).unwrap().as_str(), data.version.as_str()) {
+            Ok(a) => a,
+            Err(e) => return HttpResponse::InternalServerError().header("Content-Type", "application/json")
+                .body(format!(r#"{{"status": 4, error: "{}" "#, e)),
+        };
 
 
-        return HttpResponse::Ok().header("Content-Type", "application/json").body(format!(r#"{{"status": "0", "package": {}}}"#, serde_json::to_string(&data).unwrap()));
+        let mut f = File::open(&filepath).expect("no file found");
+        let metadata = std::fs::metadata(&filepath).expect("unable to read metadata");
+        let mut buffer = vec![0; metadata.len() as usize];
+        f.read(&mut buffer).expect("buffer overflow");
+
+        match upload_package_archive(&db_connection, package.id.clone(), data.version.clone(), buffer) {
+            Ok(_) => {},
+            Err(e) => return HttpResponse::InternalServerError().header("Content-Type", "application/json")
+                .body(format!(r#"{{"status": 5, error: "{}" "#, e)),
+        };
+
+        return HttpResponse::Ok().header("Content-Type", "application/json").body(format!(r#"{{"status": "0", "id": {}, "package": {}}}"#, package.id, serde_json::to_string(&data).unwrap()));
     }
 
     return HttpResponse::BadRequest().header("Content-Type", "application/json").body(format!(r#"{{"status: 1", "error": "no files uploaded"}}"#));
@@ -77,11 +105,12 @@ fn create_pkg_get() -> HttpResponse {
 }
 
 #[get("/get/{package}")]
-fn get_package(request: HttpRequest) -> HttpResponse{
+fn get_package(request: HttpRequest) -> HttpResponse {
     let package = match request.match_info().get("package") {
-        None => {return HttpResponse::BadRequest().header("Content-Type", "application/json").body(r#"{"status": 1, "error": "Please provide a package name"}"#)},
+        None => { return HttpResponse::BadRequest().header("Content-Type", "application/json").body(r#"{"status": 1, "error": "Please provide a package name"}"#); }
         Some(a) => a
     };
     println!("{}", package);
+
     return HttpResponse::NotImplemented().body("Fuck you this is not implemented yes");
 }

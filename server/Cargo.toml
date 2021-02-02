@@ -18,6 +18,11 @@ tar = "0.4.32"
 flate2 = "1.0.20"
 toml = "0.5"
 regex = "1.4.3"
+dotenv = "0.15.0"
+
+[dependencies.diesel]
+version = "1.4.5"
+features = ["postgres"]
 
 [dependencies.actix-web]
 version = "3"

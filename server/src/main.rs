@@ -1,11 +1,15 @@
-use actix_web::{App, HttpServer, get, HttpResponse};
+#[macro_use]
+extern crate diesel;
+
 use std::io::Result;
+use actix_web::{App, get, HttpResponse, HttpServer};
 use actix_web::middleware::Logger;
-use openssl::ssl::{SslAcceptor, SslMethod, SslFiletype};
 use actix_web_middleware_redirect_scheme::RedirectSchemeBuilder;
+use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 mod pkg;
 mod config;
+mod db;
 
 #[get("/")]
 fn index() -> HttpResponse {
@@ -20,6 +24,10 @@ async fn main() -> Result<()>{
     builder.set_private_key_file("key.pem", SslFiletype::PEM).unwrap();
     builder.set_certificate_chain_file("cert.pem").unwrap();
 
+    let address = format!("0.0.0.0:{}", std::env::var("PORT").unwrap_or("5000".to_string()));
+
+    println!("{}", address);
+
     HttpServer::new(|| {
         App::new()
             .service(index)
@@ -27,7 +35,7 @@ async fn main() -> Result<()>{
             .wrap(RedirectSchemeBuilder::new().build())
             .service(pkg::create_scope())
     })
-        .bind_openssl("0.0.0.0:5000", builder)?
+        .bind_openssl(address.as_str(), builder)?
         .run()
         .await
 }
