@@ -9,5 +9,6 @@ pub struct ClientConfig {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Package {
     pub name: String,
-    pub version: String
+    pub version: String,
+    pub repo: String
 }
