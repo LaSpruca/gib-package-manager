@@ -12,6 +12,7 @@ futures = "0.3.12"
 tar = "0.4.32"
 flate2 = "1.0.20"
 toml = "0.5.8"
+gib-common = { path = "../gib-common" }
 
 [dependencies.clap]
 version = "2.33.3"

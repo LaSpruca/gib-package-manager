@@ -1,5 +1,5 @@
 [package]
-name = "server"
+name = "gib-server"
 version = "0.1.0"
 authors = ["Nathan Hare <me@laspruca.nz>"]
 edition = "2018"
@@ -19,6 +19,8 @@ flate2 = "1.0.20"
 toml = "0.5"
 regex = "1.4.3"
 dotenv = "0.15.0"
+gib-common = { path = "../gib-common" }
+
 
 [dependencies.diesel]
 version = "1.4.5"

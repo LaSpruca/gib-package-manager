@@ -1,5 +1,3 @@
-mod client_config;
-
 #[macro_use]
 extern crate clap;
 
@@ -8,7 +6,7 @@ use std::io::{Write, Read};
 use std::path::{Path, PathBuf, Display};
 use flate2::read::GzDecoder;
 use tar::{Archive, Entries, Entry};
-use crate::client_config::{ClientConfig, Package};
+use gib_common::config::{ClientConfig, Package, PackageConfig};
 use std::process::exit;
 use std::fs::{File, metadata};
 use std::fs;
@@ -88,7 +86,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         copy(path.clone(), format!("{}/{}", home.clone(), path.clone().strip_prefix(format!("{}extract", working_dir.clone()).as_str()).unwrap().display()))?;
                     }
 
-                    let pacakge_config = read_package_config_file(format!("{}/package.toml", working_dir).as_str());
+                    let package_config = read_pkg_config_file(format!("{}/package.toml", working_dir).as_str())?;
+
+                    fs::copy(format!("{}/package.toml", working_dir).as_str(), format!("{}/.config/gib/installed/{}@{}.toml", home, &package_config.name, &package_config.version));
+
+                    println!("   copy: {}package.toml -> {}/.config/gib/installed/{}@{}.toml", working_dir, home, &package_config.name, &package_config.version);
+
+                    config.installed.push(Package {
+                        repo: repo.to_string(),
+                        name: package_config.clone().name,
+                        version: package_config.clone().version
+                    });
+
+                    println!("=> Installed {}@{}", package_config.name, package_config.version);
 
                     break;
                 }
@@ -132,7 +142,8 @@ fn write_config(config: &ClientConfig) {
         fs::create_dir(format!("{}/.config/gib", home).as_str()).unwrap();
     }
 
-    let mut file = fs::File::create(format!("{}/.config/gib/config.toml", home).as_str()).unwrap();
+    let mut file = fs::File::create(format!("{}/.config/gib/config.toml", home).as_str())
+        .unwrap();
 
     let config_string = toml::to_string(config).unwrap();
     file.write_all(config_string.as_bytes()).unwrap();
@@ -214,7 +225,7 @@ pub fn copy<U: AsRef<Path>, V: AsRef<Path>>(from: U, to: V) -> Result<(), std::i
                 match path.file_name() {
                     Some(filename) => {
                         let dest_path = dest.join(filename);
-                        println!("  copy: {:?} -> {:?}", &path, &dest_path);
+                        println!("   copy: {:?} -> {:?}", &path, &dest_path);
                         fs::copy(&path, &dest_path)?;
                     }
                     None => {
@@ -228,9 +239,9 @@ pub fn copy<U: AsRef<Path>, V: AsRef<Path>>(from: U, to: V) -> Result<(), std::i
     Ok(())
 }
 
-pub fn read_pkg_config_file(file: &str) -> Result<String, std::io::Error>{
+pub fn read_pkg_config_file(file: &str) -> Result<PackageConfig, Box<dyn std::error::Error>>{
     let mut buff = String::new();
     let mut file = File::open(file)?;
     file.read_to_string(&mut buff)?;
-    Ok(buff)
+    Ok(toml::from_str::<PackageConfig>(&buff)?)
 }

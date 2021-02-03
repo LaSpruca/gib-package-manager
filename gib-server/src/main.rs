@@ -8,12 +8,11 @@ use actix_web_middleware_redirect_scheme::RedirectSchemeBuilder;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 mod pkg;
-mod config;
 mod db;
 
 #[get("/")]
 fn index() -> HttpResponse {
-    HttpResponse::Ok().body(r#"{"server-version": "1.0.0"}"#)
+    HttpResponse::Ok().body(r#"{"gib-server-version": "1.0.0"}"#)
 }
 
 #[actix_web::main]

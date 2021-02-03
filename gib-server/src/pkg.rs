@@ -7,8 +7,8 @@ use flate2::read::GzDecoder;
 use tar::Archive;
 use regex::Regex;
 use crate::db::{establish_connection, create_pacakge, upload_package_archive, get_package_by_name, get_package_archive};
-use crate::config::PackageConfig;
 use actix_web::web::Bytes;
+use gib_common::config::PackageConfig;
 
 pub fn create_scope() -> Scope {
     Scope::new("/pkg")
@@ -55,7 +55,7 @@ async fn create_pkg(mut playload: Multipart) -> HttpResponse {
             break;
         }
 
-        let mut data = match toml::from_str::<super::config::PackageConfig>(config_str.as_str()) {
+        let mut data = match toml::from_str::<PackageConfig>(config_str.as_str()) {
             Ok(a) => a,
             Err(e) => {
                 return HttpResponse::BadRequest()
