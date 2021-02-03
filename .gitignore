@@ -1,4 +1,4 @@
 /target
 /.idea
-/server/tmp
+**/tmp
 /server/.env

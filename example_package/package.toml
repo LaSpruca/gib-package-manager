@@ -2,3 +2,6 @@ name = "example-package"
 version = "0.1.0"
 author = "Nathan Hare"
 post_script = "install.sh"
+install-dir = [
+    ".local/share/example"
+]
