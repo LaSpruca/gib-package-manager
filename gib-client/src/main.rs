@@ -10,6 +10,8 @@ use gib_common::config::{ClientConfig, Package, PackageConfig};
 use std::process::exit;
 use std::fs::{File, metadata};
 use std::fs;
+use run_script::types::{ScriptOptions, IoOptions};
+use gib_common::util::copy;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -63,7 +65,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let mut archive = Archive::new(GzDecoder::new(output));
                     archive.unpack("./tmp").unwrap();
 
-                    let mut archive =  Archive::new(GzDecoder::new(File::open("./tmp/output.tar.gz").unwrap()));
+                    let mut archive = Archive::new(GzDecoder::new(File::open("./tmp/output.tar.gz").unwrap()));
                     let indexes = archive
                         .entries()
                         .unwrap()
@@ -95,8 +97,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     config.installed.push(Package {
                         repo: repo.to_string(),
                         name: package_config.clone().name,
-                        version: package_config.clone().version
+                        version: package_config.clone().version,
                     });
+
+                    if let Some(install_script) = package_config.post_script {
+                        println!("=> Executing post install script");
+                        let mut options = ScriptOptions::new();
+                        options.output_redirection = IoOptions::Inherit;
+                        let args = vec![];
+
+                        let mut source = String::new();
+                        let mut script_file = match File::open(format!("{}/{}", working_dir, install_script).as_str()) {
+                            Ok(a) => { a }
+                            Err(_) => {
+                                eprintln!("! Error executing script !");
+                                return Ok(());
+                            }
+                        };
+                        script_file.read_to_string(&mut source)?;
+
+                        let (_code, _output, _error) = run_script::run(source.as_str(), &args, &options)?;
+
+                        println!("=> Done executing post install script");
+                    }
 
                     println!("=> Installed {}@{}", package_config.name, package_config.version);
 
@@ -191,55 +214,7 @@ fn file_exists(file: &str) -> bool {
     Path::new(file).is_file()
 }
 
-// Copied from stackoverflow: https://stackoverflow.com/questions/26958489/how-to-copy-a-folder-recursively-in-rust
-pub fn copy<U: AsRef<Path>, V: AsRef<Path>>(from: U, to: V) -> Result<(), std::io::Error> {
-    let mut stack = Vec::new();
-    stack.push(PathBuf::from(from.as_ref()));
-
-    let output_root = PathBuf::from(to.as_ref());
-    let input_root = PathBuf::from(from.as_ref()).components().count();
-
-    while let Some(working_path) = stack.pop() {
-        println!("process: {:?}", &working_path);
-
-        // Generate a relative path
-        let src: PathBuf = working_path.components().skip(input_root).collect();
-
-        // Create a destination if missing
-        let dest = if src.components().count() == 0 {
-            output_root.clone()
-        } else {
-            output_root.join(&src)
-        };
-        if fs::metadata(&dest).is_err() {
-            println!(" mkdir: {:?}", dest);
-            fs::create_dir_all(&dest)?;
-        }
-
-        for entry in fs::read_dir(working_path)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_dir() {
-                stack.push(path);
-            } else {
-                match path.file_name() {
-                    Some(filename) => {
-                        let dest_path = dest.join(filename);
-                        println!("   copy: {:?} -> {:?}", &path, &dest_path);
-                        fs::copy(&path, &dest_path)?;
-                    }
-                    None => {
-                        println!("failed: {:?}", path);
-                    }
-                }
-            }
-        }
-    }
-
-    Ok(())
-}
-
-pub fn read_pkg_config_file(file: &str) -> Result<PackageConfig, Box<dyn std::error::Error>>{
+pub fn read_pkg_config_file(file: &str) -> Result<PackageConfig, Box<dyn std::error::Error>> {
     let mut buff = String::new();
     let mut file = File::open(file)?;
     file.read_to_string(&mut buff)?;
