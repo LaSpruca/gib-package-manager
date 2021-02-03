@@ -8,16 +8,14 @@ use tar::Archive;
 use regex::Regex;
 use crate::db::{establish_connection, create_pacakge, upload_package_archive, get_package_by_name, get_package_archive};
 use crate::config::Config;
-use actix_web::dev::HttpResponseBuilder;
 use actix_web::web::Bytes;
-use actix_web::http::HeaderMap;
-use futures::prelude::*;
 
 pub fn create_scope() -> Scope {
     Scope::new("/pkg")
         .service(create_pkg)
         .service(create_pkg_get)
         .service(get_package_latest)
+        .service(get_package_version)
         .service(get_package)
 }
 
@@ -168,8 +166,6 @@ fn get_package(request: HttpRequest) -> HttpResponse {
 async fn get_package_latest(request: HttpRequest) -> HttpResponse {
     let package = request.match_info().get("package").unwrap();
 
-    println!("{}", package);
-
     let db_connection = match establish_connection() {
         Ok(a) => a,
         Err(e) => return HttpResponse::InternalServerError().header("Content-Type", "application/json")
@@ -202,6 +198,51 @@ async fn get_package_latest(request: HttpRequest) -> HttpResponse {
         return HttpResponse::BadRequest()
             .header("Content-Type", "application/json")
             .body(format!(r#"{{"status": "7", "error": "no archive forund for: {}@{}"}}"#, package.package_name, package.current_version));
+    }
+
+    let archive = archives.get(0).unwrap().archive.as_slice();
+    let slice = archive.to_owned();
+
+    return HttpResponse::Ok()
+        .header("Content-Type", "application/x-gzip")
+        .body(Bytes::from(slice))
+}
+
+#[get("/get/{package}@{version}")]
+async fn get_package_version(request: HttpRequest) -> HttpResponse {
+    let package = request.match_info().get("package").unwrap();
+    let version = request.match_info().get("version").unwrap();
+
+    let db_connection = match establish_connection() {
+        Ok(a) => a,
+        Err(e) => return HttpResponse::InternalServerError().header("Content-Type", "application/json")
+            .body(format!(r#"{{"status": 3, error: "{}" "#, e))
+    };
+
+    let packages = match get_package_by_name(&db_connection, package.to_string()) {
+        Ok(a) => a,
+        Err(e) => return HttpResponse::InternalServerError().header("Content-Type", "application/json")
+            .body(format!(r#"{{"status": 6, error: "{}" "#, e)),
+    };
+
+    if packages.is_empty() {
+        return HttpResponse::BadRequest()
+            .header("Content-Type", "application/json")
+            .body(format!(r#"{{"status": "7", "error": "no package found called: {}"}}"#, package));
+    }
+
+    let package = packages.get(0).unwrap();
+
+    let archives = match get_package_archive(&db_connection, package.id, version.to_string()) {
+        Ok(a) => a,
+        Err(e) => return HttpResponse::InternalServerError().header("Content-Type", "application/json")
+            .body(format!(r#"{{"status": 6, error: "{}" "#, e)),
+    };
+
+    if archives.is_empty() {
+        return HttpResponse::BadRequest()
+            .header("Content-Type", "application/json")
+            .body(format!(r#"{{"status": "7", "error": "no archive forund for: {}@{}"}}"#, package.package_name, version));
     }
 
     let archive = archives.get(0).unwrap().archive.as_slice();

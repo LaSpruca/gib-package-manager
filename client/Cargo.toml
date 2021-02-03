@@ -1,5 +1,5 @@
 [package]
-name = "client"
+name = "gib"
 version = "0.1.0"
 authors = ["Nathan Hare <me@laspruca.nz>"]
 edition = "2018"
@@ -9,7 +9,18 @@ edition = "2018"
 [dependencies]
 reqwest = "0.11.0"
 futures = "0.3.12"
+tar = "0.4.32"
+flate2 = "1.0.20"
+toml = "0.5.8"
+
+[dependencies.clap]
+version = "2.33.3"
+features = ["yaml"]
 
 [dependencies.tokio]
 version = "1.0.2"
 features = ["full"]
+
+[dependencies.serde]
+version = "1.0.123"
+features = ["derive"]
