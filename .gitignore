@@ -2,3 +2,10 @@
 /.idea
 **/tmp
 /gib-server/.env
+
+# Things to do with the front end website
+/gib-server/static
+/gib-web/static/wasm
+/gib-web/static/*.js
+/gib-web/node_modules
+/gib-web/target

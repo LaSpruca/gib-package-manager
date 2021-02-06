@@ -2,7 +2,7 @@
 extern crate diesel;
 
 use std::io::Result;
-use actix_web::{App, get, HttpResponse, HttpServer};
+use actix_web::{App, get, HttpResponse, HttpServer, Scope};
 use actix_web::middleware::Logger;
 use actix_web_middleware_redirect_scheme::RedirectSchemeBuilder;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
@@ -29,10 +29,10 @@ async fn main() -> Result<()>{
 
     HttpServer::new(|| {
         App::new()
-            .service(index)
             .wrap(Logger::default())
             .wrap(RedirectSchemeBuilder::new().build())
-            .service(pkg::create_scope())
+            .service(Scope::new("/api").service(pkg::create_scope()).service(index))
+            .service(actix_files::Files::new("/", "static"))
     })
         .bind_openssl(address.as_str(), builder)?
         .run()
