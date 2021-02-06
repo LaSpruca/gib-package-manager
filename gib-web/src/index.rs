@@ -24,8 +24,12 @@ impl Component for Index {
 
     fn view(&self) -> Html {
         html! {
-            <div>
-                <h1>{"Welcome to Gib PM"}</h1>
+            <div class="text">
+                <div class="text-bg">
+                    <h1>{"Welcome to Gib PM"}</h1>
+                    <p>{"Still under development"}</p>
+                    <a href="https://github.com/LaSpruca/gib-package-manager">{"GitHub"}</a>
+                </div>
             </div>
         }
     }

@@ -5,13 +5,15 @@
   "license": "MIT",
   "devDependencies": {
     "@rollup/plugin-typescript": "^8.1.1",
+    "nodemon": "^2.0.7",
     "rollup": "^2.38.5",
     "rollup-plugin-scss": "^2.6.1",
     "tslib": "^2.1.0",
     "typescript": "^4.1.3"
   },
   "scripts": {
-    "build": "wasm-pack build --target web --out-dir static/wasm ; rollup -c rollup.config.js ; rm -rf ../gib-server/static/* ; cp -r static/* ../gib-server/static"
+    "build": "wasm-pack build --target web --out-dir static/wasm ; rollup -c rollup.config.js ; rm -rf ../gib-server/static/* ; cp -r static/* ../gib-server/static",
+    "watch": "nodemon"
   },
   "nodemonConfig": {
     "ignore": [
@@ -20,7 +22,8 @@
     "watch": [
       "src",
       "static",
-      "js"
+      "js",
+      "style"
     ],
     "ext": ".rs,.ts,.html,.scss",
     "exec": "yarn build"

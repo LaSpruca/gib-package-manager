@@ -1,4 +1,5 @@
 import init, {index} from "../static/wasm/gib_web";
+import "../style/main.scss";
 
 // @ts-ignore
 (async () => {
