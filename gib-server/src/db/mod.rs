@@ -2,9 +2,9 @@ use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenv::dotenv;
 use std::env;
-use crate::db::models::{Package, NewPackage, NewPackageArchive, PackageArchive};
+use crate::db::models::{Package, NewPackage, NewPackageArchive, PackageArchive, User, CreateToken, UserToken};
 
-mod models;
+pub mod models;
 mod schema;
 
 pub fn establish_connection() -> Result<PgConnection, Box<dyn std::error::Error>> {
@@ -57,4 +57,40 @@ pub fn get_package_archive(conn: &PgConnection, pkg_id: i32, ver: String) -> Que
         .filter(package_id.eq(pkg_id))
         .filter(version.like(ver))
         .load::<PackageArchive>(conn)
+}
+
+pub fn get_user_by_id(conn: &PgConnection, usr_id: i32) -> QueryResult<Vec<User>> {
+    use schema::gib_pm::users::dsl::*;
+
+    users.filter(id.eq(usr_id))
+        .load::<User>(conn)
+}
+
+pub fn create_user(conn: &PgConnection, info: User) -> QueryResult<User> {
+    use schema::gib_pm::users;
+
+    diesel::insert_into(users::table)
+        .values(info)
+        .get_result(conn)
+}
+
+pub fn create_token(conn: &PgConnection, user_id: i32) -> QueryResult<UserToken> {
+    use schema::gib_pm::user_tokens;
+
+    diesel::insert_into(user_tokens::table)
+        .values(CreateToken { user_id })
+        .get_result(conn)
+}
+
+pub fn delete_token(conn: &PgConnection, token_id: i32) {
+    use schema::gib_pm::user_tokens::dsl::*;
+
+    diesel::delete(user_tokens.filter(id.eq(token_id))).execute(conn);
+}
+
+pub fn get_token(conn: &PgConnection, token_id: i32) -> QueryResult<Vec<UserToken>> {
+    use schema::gib_pm::user_tokens::dsl::*;
+
+    user_tokens.filter(id.eq(token_id))
+        .load::<UserToken>(conn)
 }

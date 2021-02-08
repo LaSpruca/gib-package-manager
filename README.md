@@ -11,3 +11,4 @@ I got board, so I decided to make a package manager, it will be teriable, but oh
 5. No or invalid parameters
 6. Error getting data from db
 7. No results found
+8. OAuth error

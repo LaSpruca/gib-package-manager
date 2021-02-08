@@ -19,17 +19,25 @@ pub mod gib_pm {
     }
 
     table! {
+        gib_pm.user_tokens (id) {
+            id -> Int4,
+            user_id -> Int4,
+        }
+    }
+
+    table! {
         gib_pm.users (id) {
             id -> Int4,
             username -> Text,
-            password -> Varchar,
             email -> Text,
+            avatar_url -> Text,
         }
     }
 
     allow_tables_to_appear_in_same_query!(
         package_archives,
         packages,
+        user_tokens,
         users,
     );
 }

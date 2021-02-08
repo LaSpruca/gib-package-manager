@@ -12,30 +12,26 @@ pub struct Header {
     link: ComponentLink<Self>,
 }
 
-pub enum Msg {
-    Logout,
-}
+// impl Header {
+//     fn set_session(&self, key: &str, value: &str) -> Result<(), JsValue> {
+//         self.window
+//             .session_storage()
+//             .unwrap()
+//             .unwrap()
+//             .set_item(key, value)
+//     }
 
-impl Header {
-    fn set_session(&self, key: &str, value: &str) -> Result<(), JsValue> {
-        self.window
-            .session_storage()
-            .unwrap()
-            .unwrap()
-            .set_item(key, value)
-    }
-
-    fn get_session(&self, key: &str) -> Result<Option<String>, JsValue> {
-        self.window
-            .session_storage()
-            .unwrap()
-            .unwrap()
-            .get_item(key)
-    }
-}
+//     fn get_session(&self, key: &str) -> Result<Option<String>, JsValue> {
+//         self.window
+//             .session_storage()
+//             .unwrap()
+//             .unwrap()
+//             .get_item(key)
+//     }
+// }
 
 impl Component for Header {
-    type Message = Msg;
+    type Message = ();
     type Properties = ();
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
@@ -61,17 +57,8 @@ impl Component for Header {
         }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
-        match msg {
-            Msg::Logout => {
-                self.set_session("loggedIn", "false").unwrap();
-                self.set_session("authToken", "").unwrap();
-
-                self.auth_token = "".to_string();
-                self.logged_in = false;
-                true
-            }
-        }
+    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
+        false
     }
 
     fn change(&mut self, _props: Self::Properties) -> ShouldRender {
@@ -91,14 +78,14 @@ impl Component for Header {
                             if !self.logged_in {
                                 html! {
                                     <>
-                                        <a href="/account/login.html">{"Login"}</a>
+                                        <a href="https://github.com/login/oauth/authorize?client_id=3858b07a17ad5a97dd40&scope=user">{"Login with GitHub"}</a>
                                     </>
                                 }
                             } else {
                                 html! {
                                     <>
                                         <a href="/account" > {"Account"} </a>
-                                        <a href="javascript: void(0)" onclick=self.link.callback(|_: MouseEvent| Msg::Logout)>{"Logout"}</a>
+                                        <a href=format!("/logout?auth_token={}", self.auth_token)>{"Logout"}</a>
                                     </>
                                 }
                             }
