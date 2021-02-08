@@ -13,6 +13,7 @@
   },
   "scripts": {
     "build": "wasm-pack build --target web --out-dir static/wasm ; rollup -c rollup.config.js ; rm -rf ../gib-server/static/* ; cp -r static/* ../gib-server/static",
+    "build:debug": "wasm-pack build --debug --target web --out-dir static/wasm ; rollup -c rollup.config.js ; rm -rf ../gib-server/static/* ; cp -r static/* ../gib-server/static",
     "watch": "nodemon"
   },
   "nodemonConfig": {
@@ -26,6 +27,6 @@
       "style"
     ],
     "ext": ".rs,.ts,.html,.scss",
-    "exec": "yarn build"
+    "exec": "yarn build:debug"
   }
 }

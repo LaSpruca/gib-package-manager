@@ -46,7 +46,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut package_found = false;
 
             for repo in config.repos.iter() {
-                let url = format!("{}pkg/get/{}@latest", repo, pkg[0]);
+                let url = format!("{}api/pkg/get/{}@latest", repo, pkg[0]);
                 println!("=> Checking {}", url);
                 let response = client.get(url.as_str()).send().await?;
                 if response.status() == 200 {

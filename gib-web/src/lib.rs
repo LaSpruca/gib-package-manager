@@ -1,4 +1,5 @@
 mod index;
+mod compoents;
 
 use wasm_bindgen::prelude::*;
 use yew::App;

@@ -23,8 +23,10 @@ impl Component for Index {
     }
 
     fn view(&self) -> Html {
+        use super::compoents::header::Header;
         html! {
             <div class="text">
+                <Header />
                 <div class="text-bg">
                     <h1>{"Welcome to Gib PM"}</h1>
                     <p>{"Still under development"}</p>

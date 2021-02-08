@@ -32,7 +32,7 @@ async fn main() -> Result<()>{
             .wrap(Logger::default())
             .wrap(RedirectSchemeBuilder::new().build())
             .service(Scope::new("/api").service(pkg::create_scope()).service(index))
-            .service(actix_files::Files::new("/", "static"))
+            .service(actix_files::Files::new("/", "static").index_file("index.html"))
     })
         .bind_openssl(address.as_str(), builder)?
         .run()
