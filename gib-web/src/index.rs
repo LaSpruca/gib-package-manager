@@ -9,9 +9,7 @@ impl Component for Index {
     type Properties = ();
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        Self {
-            link
-        }
+        Self { link }
     }
 
     fn update(&mut self, _msg: Self::Message) -> ShouldRender {
@@ -23,16 +21,19 @@ impl Component for Index {
     }
 
     fn view(&self) -> Html {
-        use super::compoents::header::Header;
+        use super::components::header::Header;
         html! {
+            <>
+            <Header />
+
             <div class="text">
-                <Header />
                 <div class="text-bg">
                     <h1>{"Welcome to Gib PM"}</h1>
                     <p>{"Still under development"}</p>
                     <a href="https://github.com/LaSpruca/gib-package-manager">{"GitHub"}</a>
                 </div>
             </div>
+            </>
         }
     }
 }

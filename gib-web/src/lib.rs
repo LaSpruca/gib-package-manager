@@ -1,9 +1,12 @@
-mod index;
-mod compoents;
+#![recursion_limit = "1024"]
 
+mod components;
+mod index;
+mod util;
+
+use crate::index::Index;
 use wasm_bindgen::prelude::*;
 use yew::App;
-use crate::index::Index;
 
 #[wasm_bindgen]
 pub fn index() {

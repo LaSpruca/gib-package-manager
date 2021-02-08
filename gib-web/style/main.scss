@@ -1,16 +1,19 @@
-@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;700&family=Roboto:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;700&family=Roboto:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap");
+@import "header";
 
 * {
   box-sizing: border-box;
   margin: 0;
+  font-family: "Roboto", sans-serif;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Open Sans', sans-serif;
-}
-
-p {
-  font-family: 'Roboto', sans-serif;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Open Sans", sans-serif;
 }
 
 body {
@@ -29,7 +32,11 @@ body {
 
   .text-bg {
     border-radius: 10px;
-    background: linear-gradient(to top right, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.15));
+    background: linear-gradient(
+      to top right,
+      rgba(255, 255, 255, 0.2),
+      rgba(255, 255, 255, 0.15)
+    );
     display: flex;
     align-items: center;
     justify-content: center;
