@@ -1,5 +1,6 @@
 use yew::prelude::*;
 use web_sys::Storage;
+use crate::{console_log, log};
 
 #[derive(Clone)]
 pub struct Header {
@@ -12,15 +13,20 @@ impl Component for Header {
     type Properties = ();
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
+        console_log!("Getting window");
         let window = web_sys::window().unwrap();
+        console_log!("Got window");
+        console_log!("Getting session");
         let mut session: Storage = window.session_storage().unwrap().unwrap();
-        let auth_key = match session.get_item("auth-key") {
-            Ok(a) => {a.unwrap()},
-            Err(e) => {panic!(e.as_string())}
+        console_log!("Got session");
+        let auth_key = match session.get_item("auth-key").unwrap() {
+            Some(a) => {a}
+            None => {"".to_string()}
         };
+
         Self {
             link,
-            auth_token: "nigga".to_string()
+            auth_token: auth_key
         }
     }
 
