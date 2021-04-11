@@ -4,8 +4,7 @@
 /gib-server/.env
 
 # Things to do with the front end website
-**/static
-/gib-web/static
+**/static/*
 !/gib-web/static/.templates
 !/gib-web/static/account
 /gib-web/target
