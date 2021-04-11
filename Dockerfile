@@ -23,6 +23,6 @@ RUN cargo build --bin gib-server --release
 # Build the website
 RUN cd gib-web && yarn install && cargo update && yarn build
 
-RUN ls target/*
+EXPOSE 5000/tcp
 
 CMD ["./start.sh"]
