@@ -6,6 +6,8 @@
 # Things to do with the front end website
 **/static
 /gib-web/static
+!/gib-web/static/.templates
+!/gib-web/static/account
 /gib-web/target
-
+/gib-web/node_modules
 db.env
