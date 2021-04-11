@@ -12,8 +12,8 @@
     "typescript": "^4.1.3"
   },
   "scripts": {
-    "build": "wasm-pack build --target web --out-dir static/wasm ; rollup -c rollup.config.js ; rm -rf ../gib-server/static/* ; cp -r static/* ../gib-server/static",
-    "build:debug": "wasm-pack build --debug --target web --out-dir static/wasm ; rollup -c rollup.config.js ; rm -rf ../gib-server/static/* ; cp -r static/* ../gib-server/static",
+    "build": "wasm-pack build --target web --out-dir static/wasm ; rollup -c rollup.config.js ; rm -rf ../gib-server/static/ ; cp -r static/ ../gib-server/static",
+    "build:debug": "wasm-pack build --debug --target web --out-dir static/wasm ; rollup -c rollup.config.js ; rm -rf ../gib-server/static/ ; cp -r static/ ../gib-server/static",
     "watch": "nodemon"
   },
   "nodemonConfig": {

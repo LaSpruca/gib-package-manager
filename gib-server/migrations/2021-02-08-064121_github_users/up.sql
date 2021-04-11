@@ -12,5 +12,6 @@ CREATE TABLE gib_pm.users
 CREATE TABLE gib_pm.user_tokens
 (
     id      SERIAL PRIMARY KEY,
-    user_id INT NOT NULL
+    user_id INT NOT NULL,
+    expiry  DATE NOT NULL
 );

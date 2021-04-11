@@ -1,7 +1,4 @@
-use crate::db::{
-    create_pacakge, establish_connection, get_package_archive, get_package_by_name,
-    upload_package_archive,
-};
+use crate::db::{create_pacakge, establish_connection, get_package_archive, get_package_by_name, upload_package_archive, DbPool};
 use actix_multipart::Multipart;
 use actix_web::web::Bytes;
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Scope};
@@ -23,7 +20,9 @@ pub fn create_scope() -> Scope {
 }
 
 #[post("/new")]
-async fn create_pkg(mut playload: Multipart) -> HttpResponse {
+async fn create_pkg(mut playload: Multipart, pool: web::Data<DbPool>) -> HttpResponse {
+    let conn = pool.get().expect("couldn't get db connection from pool");
+
     while let Ok(Some(mut field)) = playload.try_next().await {
         let content_type = field.content_disposition().unwrap();
         let filename = content_type.get_filename().unwrap();
@@ -100,20 +99,8 @@ async fn create_pkg(mut playload: Multipart) -> HttpResponse {
                 ));
         }
 
-        let db_connection = match establish_connection() {
-            Ok(a) => a,
-            Err(e) => {
-                return HttpResponse::InternalServerError()
-                    .header("Content-Type", "application/json")
-                    .body(format!(
-                        r#"{{"status": 3, error: "Database connection error {}" "#,
-                        e
-                    ))
-            }
-        };
-
         let package = match create_pacakge(
-            &db_connection,
+            &conn,
             data.name.as_str(),
             0,
             serde_json::to_string(&data).unwrap().as_str(),
@@ -136,7 +123,7 @@ async fn create_pkg(mut playload: Multipart) -> HttpResponse {
         f.read(&mut buffer).expect("buffer overflow");
 
         match upload_package_archive(
-            &db_connection,
+            &conn,
             package.id.clone(),
             data.version.clone(),
             buffer,
@@ -182,7 +169,8 @@ fn create_pkg_get() -> HttpResponse {
 }
 
 #[get("/get/{package}")]
-fn get_package(request: HttpRequest) -> HttpResponse {
+fn get_package(request: HttpRequest, pool: web::Data<DbPool>) -> HttpResponse {
+    let conn = pool.get().unwrap();
     let package = match request.match_info().get("package") {
         None => {
             return HttpResponse::BadRequest()
@@ -192,16 +180,7 @@ fn get_package(request: HttpRequest) -> HttpResponse {
         Some(a) => a,
     };
 
-    let db_connection = match establish_connection() {
-        Ok(a) => a,
-        Err(e) => {
-            return HttpResponse::InternalServerError()
-                .header("Content-Type", "application/json")
-                .body(format!(r#"{{"status": 3, error: "{}" "#, e))
-        }
-    };
-
-    let packages = match get_package_by_name(&db_connection, package.to_string()) {
+    let packages = match get_package_by_name(&conn, package.to_string()) {
         Ok(a) => a,
         Err(e) => {
             return HttpResponse::InternalServerError()
@@ -228,19 +207,11 @@ fn get_package(request: HttpRequest) -> HttpResponse {
 }
 
 #[get("/get/{package}@latest")]
-async fn get_package_latest(request: HttpRequest) -> HttpResponse {
+async fn get_package_latest(request: HttpRequest, pool: web::Data<DbPool>) -> HttpResponse {
+    let conn = pool.get().unwrap();
     let package = request.match_info().get("package").unwrap();
 
-    let db_connection = match establish_connection() {
-        Ok(a) => a,
-        Err(e) => {
-            return HttpResponse::InternalServerError()
-                .header("Content-Type", "application/json")
-                .body(format!(r#"{{"status": 3, error: "{}" "#, e))
-        }
-    };
-
-    let packages = match get_package_by_name(&db_connection, package.to_string()) {
+    let packages = match get_package_by_name(&conn, package.to_string()) {
         Ok(a) => a,
         Err(e) => {
             return HttpResponse::InternalServerError()
@@ -262,7 +233,7 @@ async fn get_package_latest(request: HttpRequest) -> HttpResponse {
 
     let data = serde_json::from_str::<PackageConfig>(package.configuration.as_str()).unwrap();
 
-    let archives = match get_package_archive(&db_connection, package.id, data.version) {
+    let archives = match get_package_archive(&conn, package.id, data.version) {
         Ok(a) => a,
         Err(e) => {
             return HttpResponse::InternalServerError()
@@ -289,20 +260,13 @@ async fn get_package_latest(request: HttpRequest) -> HttpResponse {
 }
 
 #[get("/get/{package}@{version}")]
-async fn get_package_version(request: HttpRequest) -> HttpResponse {
+async fn get_package_version(request: HttpRequest, pool: web::Data<DbPool>) -> HttpResponse {
+    let conn = pool.get().unwrap();
+
     let package = request.match_info().get("package").unwrap();
     let version = request.match_info().get("version").unwrap();
 
-    let db_connection = match establish_connection() {
-        Ok(a) => a,
-        Err(e) => {
-            return HttpResponse::InternalServerError()
-                .header("Content-Type", "application/json")
-                .body(format!(r#"{{"status": 3, error: "{}" "#, e))
-        }
-    };
-
-    let packages = match get_package_by_name(&db_connection, package.to_string()) {
+    let packages = match get_package_by_name(&conn, package.to_string()) {
         Ok(a) => a,
         Err(e) => {
             return HttpResponse::InternalServerError()
@@ -322,7 +286,7 @@ async fn get_package_version(request: HttpRequest) -> HttpResponse {
 
     let package = packages.get(0).unwrap();
 
-    let archives = match get_package_archive(&db_connection, package.id, version.to_string()) {
+    let archives = match get_package_archive(&conn, package.id, version.to_string()) {
         Ok(a) => a,
         Err(e) => {
             return HttpResponse::InternalServerError()

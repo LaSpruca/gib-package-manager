@@ -1,0 +1,9 @@
+tmp
+target
+example_package
+.idea
+.git
+gib-web/node_modules
+gib-web/target
+gib-server/target
+gib-server/static

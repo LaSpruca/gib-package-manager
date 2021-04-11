@@ -1,5 +1,7 @@
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use diesel::r2d2::{self, ConnectionManager};
+
 use dotenv::dotenv;
 use std::env;
 use crate::db::models::{Package, NewPackage, NewPackageArchive, PackageArchive, User, CreateToken, UserToken};
@@ -7,9 +9,9 @@ use crate::db::models::{Package, NewPackage, NewPackageArchive, PackageArchive, 
 pub mod models;
 mod schema;
 
-pub fn establish_connection() -> Result<PgConnection, Box<dyn std::error::Error>> {
-    dotenv().ok();
+pub type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
+pub fn establish_connection() -> Result<PgConnection, Box<dyn std::error::Error>> {
     let database_url = env::var("DATABASE_URL")?;
     Ok(PgConnection::establish(&database_url)?)
 }

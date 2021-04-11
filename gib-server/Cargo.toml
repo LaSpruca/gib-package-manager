@@ -21,13 +21,18 @@ toml = "0.5"
 regex = "1.4.3"
 dotenv = "0.15.0"
 actix-files = "0.5.0"
+actix-session = "0.4.0"
+
+[dependencies.handlebars]
+version = "3.5.2"
+features = ["dir_source"]
 
 [dependencies.gib-common]
 path = "../gib-common"
 
 [dependencies.diesel]
 version = "1.4.5"
-features = ["postgres"]
+features = ["postgres", "r2d2"]
 
 [dependencies.actix-web]
 version = "3"

@@ -1,14 +1,14 @@
 use actix_web::{
     get,
+    web,
     web::{Query},
     client::{Client},
     HttpResponse,
 };
 use dotenv::dotenv;
 use serde::Deserialize;
-
 use crate::db::models::User as UserInfo;
-use crate::db::{establish_connection, get_user_by_id, create_user, create_token, get_token, delete_token};
+use crate::db::{establish_connection, get_user_by_id, create_user, create_token, get_token, delete_token, DbPool};
 
 #[derive(Deserialize)]
 pub struct AuthRequest {
@@ -28,24 +28,12 @@ struct AuthToken {
 }
 
 #[get("/logout")]
-pub fn logout(request: Query<LogOutRequest>) -> HttpResponse {
-
-    let db_connection = match establish_connection() {
-        Ok(a) => a,
-        Err(e) => {
-            return HttpResponse::InternalServerError()
-                .header("Content-Type", "application/json")
-                .body(format!(
-                    r#"{{"status": 3, error: "Database connection error {}" "#,
-                    e
-                ))
-        }
-    };
-
-    let tokens = get_token(&db_connection, request.auth_token).unwrap();
+pub fn logout(request: Query<LogOutRequest>, pool: web::Data<DbPool>) -> HttpResponse {
+    let conn = pool.get().unwrap();
+    let tokens = get_token(&conn, request.auth_token).unwrap();
 
     if tokens.len() > 0 {
-        delete_token(&db_connection, tokens.get(0).unwrap().to_owned().id);
+        delete_token(&conn, tokens.get(0).unwrap().to_owned().id);
     }
 
     return HttpResponse::Ok().body(r#"<!doctype html>
@@ -68,8 +56,8 @@ pub fn logout(request: Query<LogOutRequest>) -> HttpResponse {
 }
 
 #[get("/login/oauth")]
-pub async fn login(request: Query<AuthRequest>) -> HttpResponse {
-    dotenv().ok();
+pub async fn login(request: Query<AuthRequest>, pool: web::Data<DbPool>) -> HttpResponse {
+    let conn = pool.get().unwrap();
 
     let client = Client::default();
 
@@ -79,7 +67,7 @@ pub async fn login(request: Query<AuthRequest>) -> HttpResponse {
     };
 
     let mut token = match client
-        .post(format!("https://github.com/login/oauth/access_token?client_id=3858b07a17ad5a97dd40&client_secret={}&code={}", secret, request.code))
+        .post(format!("https://github.com/login/oauth/access_token?client_id=d048d26d0e2a22a39661&client_secret={}&code={}", secret, request.code))
         .header("User-Agent", "gib-pm")
         .header("Accept", "application/json")
         .send()
@@ -131,19 +119,7 @@ pub async fn login(request: Query<AuthRequest>) -> HttpResponse {
     println!("{}", decoded);
     let user_info = serde_json::from_str::<UserInfo>(&decoded).unwrap();
 
-    let db_connection = match establish_connection() {
-        Ok(a) => a,
-        Err(e) => {
-            return HttpResponse::InternalServerError()
-                .header("Content-Type", "application/json")
-                .body(format!(
-                    r#"{{"status": 3, error: "Database connection error {}" "#,
-                    e
-                ))
-        }
-    };
-
-    let mut user = match get_user_by_id(&db_connection, user_info.clone().id) {
+    let mut user = match get_user_by_id(&conn, user_info.clone().id) {
         Ok(a) => a,
         Err(e) => {
             return HttpResponse::InternalServerError()
@@ -156,10 +132,10 @@ pub async fn login(request: Query<AuthRequest>) -> HttpResponse {
     };
 
     if user.len() < 1 {
-        user.push(create_user(&db_connection, user_info).unwrap());
+        user.push(create_user(&conn, user_info).unwrap());
     }
 
-    let user_token = create_token(&db_connection, user[0].id);
+    let user_token = create_token(&conn, user[0].id);
 
     return HttpResponse::Ok().body(format!(r#"<!doctype html>
 <html lang="en">

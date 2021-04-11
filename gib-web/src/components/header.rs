@@ -78,7 +78,7 @@ impl Component for Header {
                             if !self.logged_in {
                                 html! {
                                     <>
-                                        <a href="https://github.com/login/oauth/authorize?client_id=3858b07a17ad5a97dd40&scope=user">{"Login with GitHub"}</a>
+                                        <a href="https://github.com/login/oauth/authorize?client_id=d048d26d0e2a22a39661&scope=user:id%20uers:username%20user:email%20user:avatar_url">{"Login with GitHub"}</a>
                                     </>
                                 }
                             } else {

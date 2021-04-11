@@ -1,7 +1,6 @@
 # Gib
 I got board, so I decided to make a package manager, it will be teriable, but oh well.
 
-
 ## API Status
 0. Success
 1. Error opening archive server side
